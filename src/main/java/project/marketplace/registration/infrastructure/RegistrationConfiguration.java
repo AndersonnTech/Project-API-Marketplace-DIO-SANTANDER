@@ -65,7 +65,7 @@ public class RegistrationConfiguration {
 
     @Primary
     @Bean
-    public PlatformTransactionManager registrationTrasactionManager (LocalContainerEntityManagerFactoryBean emf) {
+    public PlatformTransactionManager registrationTransactionManager (LocalContainerEntityManagerFactoryBean emf) {
         return new JpaTransactionManager(emf.getObject());
     }
 }

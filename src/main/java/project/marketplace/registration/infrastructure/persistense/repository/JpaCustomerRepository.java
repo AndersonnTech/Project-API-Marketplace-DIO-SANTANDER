@@ -1,6 +1,8 @@
 package project.marketplace.registration.infrastructure.persistense.repository;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Repository;
+import project.marketplace.common.infrastructure.event.dto.CustomerCreated;
 import project.marketplace.registration.domain.Customer;
 import project.marketplace.registration.domain.CustomerRepository;
 import project.marketplace.registration.domain.Customerid;
@@ -12,15 +14,20 @@ import java.util.stream.StreamSupport;
 @Repository
 public class JpaCustomerRepository implements CustomerRepository {
     private final CustomerEntityRepository customerEntityRepository;
+    private final ApplicationEventPublisher publisher;
 
-    public JpaCustomerRepository(CustomerEntityRepository customerEntityRepository) {
+    public JpaCustomerRepository(CustomerEntityRepository customerEntityRepository,
+                                 ApplicationEventPublisher publisher ) {
         this.customerEntityRepository = customerEntityRepository;
+        this.publisher = publisher;
     }
 
     @Override
     public Customer save(Customer customer) {
         var entity = mapper(customer);
         customerEntityRepository.save(entity);
+
+        publisher.publishEvent(new CustomerCreated(customer.getId().toString(), customer.getName()));
         return customer;
     }
 
