@@ -1,19 +1,21 @@
 package project.marketplace.ticketing.infrastructure.persistence.repository;
 
 import org.springframework.stereotype.Repository;
-import project.marketplace.ticketing.domain.Event;
-import project.marketplace.ticketing.domain.EventRepository;
-import project.marketplace.ticketing.domain.Seat;
-import project.marketplace.ticketing.domain.Sector;
+import project.marketplace.ticketing.domain.*;
+import project.marketplace.ticketing.infrastructure.persistence.entity.SeatLock;
 
+import java.time.Instant;
 import java.util.List;
 
 @Repository
-public class PostgresEventRepository implements EventRepository {
-    private EventCrudRepository eventCrudRepository;
+public class WorkOfUnitEventRepository implements EventRepository {
+    private final EventCrudRepository eventCrudRepository;
+    private final RedisSeatLockRepository redisSeatLockRepository;
 
-    public PostgresEventRepository(EventCrudRepository eventCrudRepository) {
+
+    public WorkOfUnitEventRepository(EventCrudRepository eventCrudRepository, RedisSeatLockRepository redisSeatLockRepository) {
         this.eventCrudRepository = eventCrudRepository;
+        this.redisSeatLockRepository = redisSeatLockRepository;
     }
 
     @Override
@@ -44,5 +46,23 @@ public class PostgresEventRepository implements EventRepository {
                 sectors);
 
         eventCrudRepository.save(entity);
+    }
+
+    @Override
+    public boolean existsSeat(EventId eventId, SeatId seatId) {
+        return eventCrudRepository.existsByCorrelationIdAndSectors_Seats_CorrelationId(eventId.id(), seatId.id());
+    }
+
+    @Override
+    public boolean tryLockSeat(EventId eventId, SeatId seatId, CustomerId customerId) {
+        String lockId = eventId.id().toString() + ":" + seatId.id();
+
+        if (redisSeatLockRepository.existsById(lockId)) {
+            return false;
+        }
+
+        var lock = new SeatLock(lockId, customerId.id().toString(), Instant.now());
+        redisSeatLockRepository.save(lock);
+        return true;
     }
 }
